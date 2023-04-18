@@ -131,6 +131,8 @@ void setup() {
   }
 
   sd_sign = true; // sd initialization check passes
+
+  Serial.println("Photos will begin in one minute, please be ready.");
 }
 
 void loop() {
@@ -138,16 +140,14 @@ void loop() {
   if(camera_sign && sd_sign){
     // Get the current time
     unsigned long now = millis();
-
-    Serial.println("Photos will begin in one minute, please be ready.");
-    
-    char filename[32];
-    sprintf(filename, "/image%d.jpg", imageCount);
   
     //If it has been more than 1 minute since the last shot, take a picture and save it to the SD card
     if ((now - lastCaptureTime) >= 60000) {
+      char filename[32];
+      sprintf(filename, "/image%d.jpg", imageCount);
       photo_save(filename);
       Serial.printf("Saved picture：%s\n", filename);
+      Serial.println("Photos will begin in one minute, please be ready.");
       imageCount++;
       lastCaptureTime = now;
     }
