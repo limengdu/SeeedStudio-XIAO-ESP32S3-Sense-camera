@@ -119,6 +119,7 @@ void setup() {
   tft.fillScreen(TFT_WHITE);
 
   // Initialize SD card
+  digitalWrite(21, HIGH);
   if(!SD.begin(21)){
     Serial.println("Card Mount Failed");
     return;
