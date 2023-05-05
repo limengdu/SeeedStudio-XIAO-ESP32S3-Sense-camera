@@ -31,7 +31,7 @@ void photo_save(const char * fileName) {
 
 // SD card write file
 void writeFile(fs::FS &fs, const char * path, uint8_t * data, size_t len){
-    Serial.printf("Writing file: %s\n", path);
+    Serial.printf("Writing file: %s\r\n", path);
 
     File file = fs.open(path, FILE_WRITE);
     if(!file){
@@ -146,7 +146,7 @@ void loop() {
       char filename[32];
       sprintf(filename, "/image%d.jpg", imageCount);
       photo_save(filename);
-      Serial.printf("Saved picture：%s\n", filename);
+      Serial.printf("Saved picture: %s\r\n", filename);
       Serial.println("Photos will begin in one minute, please be ready.");
       imageCount++;
       lastCaptureTime = now;
