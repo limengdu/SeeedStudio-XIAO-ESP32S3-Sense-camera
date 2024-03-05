@@ -1,3 +1,7 @@
+/*
+* Since no decoder has been added to this program, the recorded video may not be playable.
+* */
+
 #include "esp_camera.h"
 #include "FS.h"
 #include "SD.h"
