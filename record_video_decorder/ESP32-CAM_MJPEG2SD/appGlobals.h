@@ -77,7 +77,7 @@ CAMERA_MODEL_ESP32S3_CAM_LCD
 #define HOSTNAME_GRP 99
 //#define REPORT_IDLE // core processor idle time monitoring
  
-#define APP_NAME "XIAO_ESP32S3_SENSE" // max 15 chars
+#define APP_NAME "XIAO_ESP32S3" // max 15 chars
 #define APP_VER "9.6.1"
 
 #define HTTP_CLIENTS 2 // http, ws
