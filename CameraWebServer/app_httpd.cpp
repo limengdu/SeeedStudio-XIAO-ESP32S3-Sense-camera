@@ -1386,8 +1386,7 @@ void startCameraServer()
 void setupLedFlash(int pin) 
 {
     #if CONFIG_LED_ILLUMINATOR_ENABLED
-    ledcSetup(LED_LEDC_CHANNEL, 5000, 8);
-    ledcAttachPin(pin, LED_LEDC_CHANNEL);
+    ledcAttach(LED_LEDC_CHANNEL, 5000, 8);
     #else
     log_i("LED flash is disabled -> CONFIG_LED_ILLUMINATOR_ENABLED = 0");
     #endif
