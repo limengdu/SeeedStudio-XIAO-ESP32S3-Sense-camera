@@ -107,7 +107,7 @@ void loop() {
         Serial.println("Error opening video file!");
         return;
       }
-      Serial.printf("Recording video：%s\n", filename);
+      Serial.printf("Recording video: %s\n", filename);
       lastCaptureTime = now;
       
       // Start capturing video frames
