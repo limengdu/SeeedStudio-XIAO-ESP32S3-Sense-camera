@@ -1,3 +1,5 @@
+This routine needs to be used in conjunction with [Round Display for XIAO](https://www.seeedstudio.com/Seeed-Studio-Round-Display-for-XIAO-p-5638.html), the main purpose of which is to display the live XIAO ESP32S3 Sense screen on the screen. And save the current screen to SD card when touching the screen.
+
 ## XIAO Round Display Software Preparation
 
 - First, you need to search and download the latest version `TFT_eSPI` and `LVGL` libraries in the Arduino IDE Library Manager.

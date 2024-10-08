@@ -162,7 +162,7 @@ void loop() {
       sprintf(filename, "/image%d.jpg", imageCount);
       // Save photo to file
       writeFile(SD, filename, fb->buf, fb->len);
-      Serial.printf("Saved picture：%s\n", filename);
+      Serial.printf("Saved picture: %s\n", filename);
       imageCount++;
     }
   
