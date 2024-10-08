@@ -1,9 +1,9 @@
 # ESP32-CAM_MJPEG2SD
 
 
-**This program is from [s60sc](https://github.com/s60sc)'s [ESP32-CAM_MJPEG2SD](https://github.com/s60sc/ESP32-CAM_MJPEG2SD), with a simple revision of the XIAO support and disabling of features other than video recording.**
+**This program is from [s60sc](https://github.com/s60sc)'s [ESP32-CAM_MJPEG2SD](https://github.com/s60sc/ESP32-CAM_MJPEG2SD), with a simple revision of the XIAO support. The projects under this repository have been modified for XIAO ESP32S3 Sense, and can be compiled and uploaded directly to XIAO ESP32S3 Sense.**
 
-Application for ESP32 / ESP32S3 with OV2640 / OV5640 camera to record JPEGs to SD card as AVI files and playback to browser as an MJPEG stream. The AVI format allows recordings to replay at correct frame rate on media players. If a microphone is installed then a WAV file is also created and stored in the AVI file.  
+Application for XIAO ESP32S3 with OV2640 / OV5640 camera to record JPEGs to SD card as AVI files and playback to browser as an MJPEG stream. The AVI format allows recordings to replay at correct frame rate on media players. If a microphone is installed then a WAV file is also created and stored in the AVI file.  
 The application supports:
 * [Motion detection by camera](#motion-detection-by-camera) or PIR / radar sensor
 * Time lapse recording
@@ -19,38 +19,9 @@ The application supports:
 * Interface for [Machine Learning](#machine-learning) support.
 * [Camera Hub](#camera-hub) feature to access other ESP32-CAM_MJPEG2SD devices.
 
-The ESP32 cannot support all of the features as it will run out of heap space.  For better functionality and performance, use one of the new ESP32S3 camera boards, eg Freenove ESP32S3 Cam, ESP32S3 XIAO Sense.
+The ESP32 cannot support all of the features as it will run out of heap space.  For better functionality and performance, use one of the new ESP32S3 camera boards, eg XIAO ESP32S3 Sense.
 
 ***This is a complex app and some users are raising issues when the app reports an error, but this is the app notifying the user that there is an problem with their setup, which only the user can fix. Be aware that some clone boards have different specs to the original, eg PSRAM size. Please only raise issues for actual bugs (unhandled library error or crash), or to suggest an improvement or enhancement. Thanks.***
-
-Changes in version 9.1:
-* Telegram support.
-* All web traffic now uses single port.
-* RTC ram log added to persist over soft resets
-
-Changes in version 9.1.2:
-* New stream terminates older stream except NVR
-
-Changes in version 9.2:
-* Interface for Machine Learning support.
-* HTTPS upload alternative to FTP, see `ftp.cpp` for details. 
-
-Changes in version 9.3:
-* Subtitles for [Telemetry Recording](#telemetry-recording)
-
-Changes in version 9.4:
-* [Camera Hub](#camera-hub) feature to access other ESP32-CAM_MJPEG2SD devices.
-
-Changes in version 9.5:
-* Reduce code size by deleting files for unwanted features - see `appGlobals.h`
-
-Changes in version 9.6:
-* Add audio [#360](https://github.com/s60sc/ESP32-CAM_MJPEG2SD/issues/360) and subtitle streaming for [NVR](#stream-to-nvr)
-* Add check for insufficient PSRAM [#363](https://github.com/s60sc/ESP32-CAM_MJPEG2SD/issues/363#issuecomment-1935037553)
-
-Changes in version 9.6.1:
-* Add brownout warning
-* Applied fix in issue [#381](https://github.com/s60sc/ESP32-CAM_MJPEG2SD/issues/381)
 
 ## Purpose
 
@@ -89,29 +60,46 @@ The ESP32 time is set from an NTP server or connected browser client.
 ## Installation
 
 Download github files into the Arduino IDE sketch folder, removing `-master` from the application folder name.
-Select the required ESP-CAM board using `CAMERA_MODEL_` in `appGlobals.h` unless using the one of the defaults:
-* ESP32 Cam board - `CAMERA_MODEL_AI_THINKER`
-* Freenove ESP32S3 Cam board - `CAMERA_MODEL_ESP32S3_EYE` 
 
-Select the ESP32 or ESP32S3 Dev Module board and compile with PSRAM enabled and the following Partition scheme:
-* ESP32 - `Minimal SPIFFS (...)`
-* ESP32S3 - `8M with spiffs (...)`
+Select the XIAO ESP32S3 Sense board and compile with PSRAM enabled and the following Partition scheme:
+* Flash Size - `8MB (64Mb)`
+* Partition Scheme: `Default with spiffs (3MB APP/1.5MB SPIFFS)`
+* PSRAM: `OPI PSRAM`
 
-**NOTE: If you get compilation errors you need to update your `arduino-esp32` core library in the IDE to latest v2.0.14 (but not yet v3.0)
+For other Arduino settings, please refer to the diagram below.
+
+<img src="extras/xiao_arduino_setting.png" width="500">
+
+**NOTE: If you get compilation errors you need to update your `arduino-esp32` core library in the IDE to latest v2.0.17 (but not yet v3.0)
 using [Boards Manager](https://github.com/s60sc/ESP32-CAM_MJPEG2SD/issues/61#issuecomment-1034928567)**
 
-**NOTE: If you get error: `Startup Failure: Check SD card inserted`, or `Camera init error 0x105` it is usually a [camera board selection](https://github.com/s60sc/ESP32-CAM_MJPEG2SD/issues/219#issuecomment-1627785417) issue**
-
-**NOTE: If you get error: `Camera init error 0xffffffff`, it is due to some cam boards being sold with only 2MB PSRAM which is insufficient for this app.
-Warning added to v9.6.**
-
-
 On first installation, the application will start in wifi AP mode - connect to SSID: **XIAO_ESP32S3_SENSE_...**, to allow router and password details to be entered via the web page on `192.168.4.1`. The configuration data file (except passwords) is automatically created, and the application web pages automatically downloaded from GitHub to the SD card **/data** folder when an internet connection is available.
+
+**If you encounter a situation where you can't download, please manually place the `data` folder in github ahead of time on your SD card.**
 
 Subsequent updates to the application, or to the **/data** folder files, can be made using the **OTA Upload** tab. The **/data** folder can also be reloaded from GitHub using the **Reload /data** button on the **Edit Config** tab.
 
 Browser functions only tested on Chrome.
 
+For tips on using XIAO ESP32S3 Sense.
+
+1. Please be careful of XIAO heat when running this programme for a long time, and beware of burns.
+
+2. If there is no special need, it is recommended to turn off the function of Motion Detected, otherwise the XIAO may be recording video all the time, increasing heat and rapidly taking up space on the memory card.
+
+<img src="extras/turn_off_motion_detect.png" width="600">
+
+3. If you need to record audio and video footage at the same time, make sure you have the microphone feature turned on, this option is off by default.
+
+<img src="extras/open_microphone.png" width="500">
+
+And turn on microphone gain.
+
+<img src="extras/microphone_gain.png" width="600">
+
+4. The recorded video can be saved elsewhere by reading the SD card or downloaded directly from the control panel.
+
+<img src="extras/download_record_files.png" width="600">
 
 ## Main Function
 
@@ -199,6 +187,9 @@ SD, email, telegram, etc management.
 
 When a feature is enable or disabled, the **Save** button should be used to persist the change, and the ESP should be rebooted using **Reboot ESP** button.
 
+---
+
+**The following features have not been tested on XIAO ESP32S3 Sense and technical support is not available.**
 
 ## Motion detection by Camera
 
