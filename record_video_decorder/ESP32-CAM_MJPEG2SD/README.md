@@ -1,5 +1,6 @@
 # ESP32-CAM_MJPEG2SD
 
+**Currently this project only supports esp-arduino version 2.0.x, not esp-arduino version 3.0.x or above.**
 
 **This program is from [s60sc](https://github.com/s60sc)'s [ESP32-CAM_MJPEG2SD](https://github.com/s60sc/ESP32-CAM_MJPEG2SD), with a simple revision of the XIAO support. The projects under this repository have been modified for XIAO ESP32S3 Sense, and can be compiled and uploaded directly to XIAO ESP32S3 Sense.**
 
