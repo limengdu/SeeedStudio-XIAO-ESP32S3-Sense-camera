@@ -10,6 +10,8 @@ This code only supports esp-arduino 3.0.x or above.
 
 
 
+**According to [Espressif](https://github.com/espressif/arduino-esp32/issues/10881), this programme no longer supports versions 3.0.7 and above due to changes in ESP-IDF.**
+
 
 
 
