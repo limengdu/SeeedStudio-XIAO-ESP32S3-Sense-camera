@@ -1,4 +1,5 @@
 #include "esp_camera.h"
+#include "ESP32_OV5640_AF.h"   // OV5640 自动对焦库 (仅 OV5640 生效)
 #include <WiFi.h>
 
 //
@@ -24,6 +25,22 @@ const char *password = "**********";
 
 void startCameraServer();
 void setupLedFlash(int pin);
+
+// --- OV5640 AF（仅 OV5640 模组生效，定焦模组 OV3660/NT99141 等自动跳过） ---
+OV5640 ov5640 = OV5640();
+#define OV5640_AF_FOCUS_FRAMESIZE FRAMESIZE_SXGA  // AF 对焦评估需 >=1280x1024
+#define OV5640_FOCUS_TIMEOUT_MS 8000
+bool waitForOv5640Focus() {
+  const uint32_t started = millis();
+  uint8_t status = 0;
+  while (millis() - started < OV5640_FOCUS_TIMEOUT_MS) {
+    status = ov5640.getFWStatus();
+    if (status == 0x10) { Serial.printf("OV5640 focus settled: FW_STATUS=0x%02X\n", status); return true; }
+    delay(100);
+  }
+  Serial.printf("WARN: OV5640 focus not settled; last FW_STATUS=0x%02X\n", status);
+  return false;
+}
 
 void setup() {
   Serial.begin(115200);
@@ -90,7 +107,31 @@ void setup() {
     return;
   }
 
+  // --- OV5640 Heat Optimization ---
+  // 0x302C bit[7:6]:11=4×(默认发热)->00=1×(最弱,最不发热)
+  // 独立作用域，不影响后续 AF / set_framesize / set_vflip；OV2640 无此寄存器自动跳过。
+  {
+    sensor_t * s = esp_camera_sensor_get();
+    if (s && s->id.PID == OV5640_PID) {
+      s->set_reg(s, 0x302C, 0xC0, 0x00);
+    }
+  }
+
   sensor_t *s = esp_camera_sensor_get();
+  // --- OV5640 自动对焦初始化（仅 OV5640，定焦模组跳过） ---
+  if (s && s->id.PID == OV5640_PID) {
+    Serial.println("OV5640 detected, initializing auto-focus...");
+    if (s->set_framesize(s, OV5640_AF_FOCUS_FRAMESIZE) == 0 && ov5640.start(s)) {
+      int r1 = ov5640.focusInit();
+      int r2 = (r1 == 0) ? ov5640.autoFocusMode() : -1;
+      Serial.printf("  focusInit=%d autoFocusMode=%d\n", r1, r2);
+      if (r1 == 0 && r2 == 0) waitForOv5640Focus();
+      s->set_framesize(s, config.frame_size);  // 恢复
+    } else {
+      Serial.println("WARN: OV5640 AF setup failed, skipped");
+      s->set_framesize(s, config.frame_size);
+    }
+  }
   // initial sensors are flipped vertically and colors are a bit saturated
   if (s->id.PID == OV3660_PID) {
     s->set_vflip(s, 1);        // flip it back

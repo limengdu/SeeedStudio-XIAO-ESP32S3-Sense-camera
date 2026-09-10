@@ -2,6 +2,7 @@
 #include <TFT_eSPI.h>
 #include <SPI.h>
 #include "esp_camera.h"
+#include "ESP32_OV5640_AF.h"   // OV5640 自动对焦库 (仅 OV5640 生效)
 
 #define CAMERA_MODEL_XIAO_ESP32S3 // Has PSRAM
 
@@ -12,6 +13,21 @@ const int camera_width = 240;
 const int camera_height = 240;
 
 TFT_eSPI tft = TFT_eSPI();
+
+// --- OV5640 AF（仅 OV5640 模组生效，定焦模组 OV3660/NT99141 等自动跳过） ---
+OV5640 ov5640 = OV5640();
+#define OV5640_FOCUS_TIMEOUT_MS 8000
+bool waitForOv5640Focus() {
+  const uint32_t started = millis();
+  uint8_t status = 0;
+  while (millis() - started < OV5640_FOCUS_TIMEOUT_MS) {
+    status = ov5640.getFWStatus();
+    if (status == 0x10) { Serial.printf("OV5640 focus settled: FW_STATUS=0x%02X\n", status); return true; }
+    delay(100);
+  }
+  Serial.printf("WARN: OV5640 focus not settled; last FW_STATUS=0x%02X\n", status);
+  return false;
+}
 
 void setup() {
   // put your setup code here, to run once:
@@ -63,9 +79,9 @@ void setup() {
   } else {
     // Best option for face detection/recognition
     config.frame_size = FRAMESIZE_240X240;
-#if CONFIG_IDF_TARGET_ESP32S3
-    config.fb_count = 2;
-#endif
+    // RGB565 240×240 用内部 DRAM 单缓冲：TFT_eSPI 的 SPI DMA 能直接读 DRAM，读 PSRAM 会导致 pushColors 崩
+    config.fb_location = CAMERA_FB_IN_DRAM;
+    config.fb_count = 1;
   }
 
   // camera init
@@ -76,8 +92,38 @@ void setup() {
   }
   Serial.printf("Camera ready");
 
+  // --- OV5640 Heat Optimization ---
+  // 0x302C bit[7:6]:11=4×(默认发热)->00=1×(最弱,最不发热)
+  // 独立作用域，不影响后续 AF / set_framesize / set_vflip；OV2640 无此寄存器自动跳过。
+  {
+    sensor_t * s = esp_camera_sensor_get();
+    if (s && s->id.PID == OV5640_PID) {
+      s->set_reg(s, 0x302C, 0xC0, 0x00);
+    }
+  }
+
+  // --- OV5640 自动对焦初始化（仅 OV5640，定焦模组跳过） ---
+  // RGB565 模式不切 SXGA（会撑爆 fb 缓冲），依赖 OV5640 内部全尺寸做对焦评估
+  sensor_t *s = esp_camera_sensor_get();
+  if (s && s->id.PID == OV5640_PID) {
+    Serial.println("OV5640 detected, initializing auto-focus...");
+    if (!ov5640.start(s)) {
+      Serial.println("WARN: OV5640 CHIPID check failed, AF skipped");
+    } else {
+      int r1 = ov5640.focusInit();
+      int r2 = (r1 == 0) ? ov5640.autoFocusMode() : -1;
+      Serial.printf("  focusInit=%d autoFocusMode=%d\n", r1, r2);
+      if (r1 == 0 && r2 == 0) waitForOv5640Focus();
+      else Serial.println("ERROR: OV5640 AF setup failed");
+    }
+  } else {
+    Serial.printf("PID=0x%04X (not OV5640), AF skipped\n", s ? s->id.PID : 0);
+  }
+
   // Display initialization
   tft.init();
+  pinMode(TFT_BL, OUTPUT);
+  digitalWrite(TFT_BL, HIGH);  // 开背光
   tft.setRotation(1);
   tft.fillScreen(TFT_WHITE);
 

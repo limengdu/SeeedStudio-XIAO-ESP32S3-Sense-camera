@@ -814,6 +814,15 @@ bool prepCam() {
   } 
   if (err != ESP_OK) snprintf(startupFailure, SF_LEN, STARTUP_FAIL "Camera init error 0x%x on %s", err, CAM_BOARD);
   else {
+    // --- OV5640 Heat Optimization ---
+    // 0x302C bit[7:6]:11=4×(默认发热)->00=1×(最弱,最不发热)
+    // 独立作用域，不影响后续 PID 判定 / set_framesize；OV2640 无此寄存器自动跳过。
+    {
+      sensor_t * s = esp_camera_sensor_get();
+      if (s && s->id.PID == OV5640_PID) {
+        s->set_reg(s, 0x302C, 0xC0, 0x00);
+      }
+    }
     sensor_t * s = esp_camera_sensor_get();
     switch (s->id.PID) {
       case (OV2640_PID):

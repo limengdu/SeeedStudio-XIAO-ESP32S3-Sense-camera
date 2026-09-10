@@ -113,6 +113,16 @@ void setup() {
   Serial.println("Camera ready");
   camera_sign = true; // Camera initialization check passes
 
+  // --- OV5640 Heat Optimization ---
+  // 0x302C bit[7:6]:11=4×(默认发热)->00=1×(最弱,最不发热)
+  // 独立作用域，不影响后续代码；OV2640 无此寄存器自动跳过。
+  {
+    sensor_t * s = esp_camera_sensor_get();
+    if (s && s->id.PID == OV5640_PID) {
+      s->set_reg(s, 0x302C, 0xC0, 0x00);
+    }
+  }
+
   // Display initialization
   tft.init();
   tft.setRotation(1);
