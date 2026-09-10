@@ -9,7 +9,7 @@
  * - The camera buffer data should be captured as RGB565 (raw image) with a 240x240 frame size
  * to be displayed on the round display. This raw image should be converted to jpeg before save
  * in the SD card. This can be done with the line:
- * esp_err_t ret = frame2jpg(fb, 12, &out_buf, &out_len);
+ * bool ok = frame2jpg(fb, 12, &out_buf, &out_len);
  *
  * - The XCLK_FREQ_HZ should be reduced from 20KHz to 10KHz in order to prevent
  * the message "no EV-VSYNC-OVF message" that appears on Serial Monitor (probably due the time
@@ -237,8 +237,8 @@ void loop() {
       // RGB565 -> JPEG, then save to SD
       size_t out_len = 0;
       uint8_t* out_buf = NULL;
-      esp_err_t ret = frame2jpg(fb, 12, &out_buf, &out_len);
-      if (ret != ESP_OK) {
+      bool ok = frame2jpg(fb, 12, &out_buf, &out_len);
+      if (!ok) {
         Serial.println("JPEG conversion failed");
       } else {
         // Save photo to file

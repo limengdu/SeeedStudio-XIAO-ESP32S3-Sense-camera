@@ -128,6 +128,17 @@ For the content of this tutorial, you **need to turn on the PARAM function** of 
 
 Before we start, we recommend you to read this chapter to understand the common camera functions. So that you can use these functions to complete your own project development or be able to read the program more easily.
 
+### Part 0: ESP32-OV5640-AF library (OV5640 auto-focus)
+
+The OV5640 examples in this repo enable VCM auto-focus via the **ESP32-OV5640-AF** library. Auto-focus only runs when an OV5640 sensor is detected (`s->id.PID == OV5640_PID`); fixed-focus modules such as OV2640/OV3660 are automatically skipped, so the library is safe to install and compile even without an OV5640 present.
+
+Install it before compiling the AF-enabled examples:
+
+1. **Arduino IDE Library Manager** (easiest): open *Sketch → Include Library → Manage Libraries…*, search for `OV5640`, and install **"OV5640 Auto Focus for ESP32 Camera"**; **or**
+2. **Manual**: download <https://github.com/limengdu/ESP32-OV5640-AF> and copy the `ESP32_OV5640_AF` folder into your Arduino `libraries/` directory, then restart the Arduino IDE.
+
+Verify: *Sketch → Include Library* should list **ESP32_OV5640_AF**.
+
 ### Part I: esp_camera.h
 
 1. Configuration structure for camera initialization.

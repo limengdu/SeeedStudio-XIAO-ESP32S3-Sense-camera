@@ -3,6 +3,7 @@
 * */
 
 #include "esp_camera.h"
+#include "ESP32_OV5640_AF.h"   // OV5640 自动对焦库 (仅 OV5640 生效)
 #include "FS.h"
 #include "SD.h"
 #include "SPI.h"
@@ -20,6 +21,28 @@ bool sd_sign = false;
 unsigned long lastCaptureTime = 0;
 unsigned long captureDuration = 10000; // 10 seconds
 int imageCount = 0;
+
+// --- OV5640 AF（仅 OV5640 模组生效，定焦模组自动跳过） ---
+OV5640 ov5640 = OV5640();
+#define OV5640_AF_FOCUS_FRAMESIZE FRAMESIZE_SXGA  // AF 对焦评估需 >=1280x1024
+#define OV5640_FOCUS_TIMEOUT_MS 8000
+
+// 等待 OV5640 连续自动对焦收敛 (FW_STATUS == 0x10 FOCUSED)
+bool waitForOv5640Focus() {
+  const uint32_t started = millis();
+  uint8_t status = 0;
+  while (millis() - started < OV5640_FOCUS_TIMEOUT_MS) {
+    status = ov5640.getFWStatus();
+    if (status == 0x10) {
+      Serial.printf("OV5640 focus settled: FW_STATUS=0x%02X\n", status);
+      return true;
+    }
+    delay(100);
+  }
+  Serial.printf("WARN: OV5640 focus not settled within %u ms; last FW_STATUS=0x%02X\n",
+                OV5640_FOCUS_TIMEOUT_MS, status);
+  return false;
+}
 
 void setup() {
   Serial.begin(115200);
@@ -69,6 +92,31 @@ void setup() {
     sensor_t * s = esp_camera_sensor_get();
     if (s && s->id.PID == OV5640_PID) {
       s->set_reg(s, 0x302C, 0xC0, 0x00);
+    }
+  }
+
+  // --- OV5640 自动对焦初始化（仅 OV5640，定焦模组跳过） ---
+  sensor_t *s = esp_camera_sensor_get();
+  if (s && s->id.PID == OV5640_PID) {
+    Serial.println("OV5640 detected, initializing auto-focus...");
+    // 切到 SXGA 做对焦（AF 固件需要 >=1280x1024 才能评估对比度）
+    if (s->set_framesize(s, OV5640_AF_FOCUS_FRAMESIZE) != 0) {
+      Serial.println("WARN: cannot set SXGA for AF focus, captures will be out of focus");
+    } else if (!ov5640.start(s)) {
+      Serial.println("WARN: OV5640 CHIPID check failed, AF skipped");
+      s->set_framesize(s, config.frame_size); // 恢复拍摄分辨率
+    } else {
+      int r1 = ov5640.focusInit();
+      int r2 = (r1 == 0) ? ov5640.autoFocusMode() : -1;
+      Serial.printf("  focusInit=%d autoFocusMode=%d\n", r1, r2);
+      if (r1 == 0 && r2 == 0 && waitForOv5640Focus()) {
+        Serial.println("OV5640 AF ready.");
+      } else {
+        Serial.println("ERROR: OV5640 AF setup failed; captures will be out of focus.");
+      }
+      if (s->set_framesize(s, config.frame_size) != 0) {
+        Serial.println("WARN: cannot restore capture framesize");
+      }
     }
   }
 
