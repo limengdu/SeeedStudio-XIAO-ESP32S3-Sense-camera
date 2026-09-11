@@ -3,7 +3,7 @@
 * */
 
 #include "esp_camera.h"
-#include "ESP32_OV5640_AF.h"   // OV5640 自动对焦库 (仅 OV5640 生效)
+#include "ESP32_OV5640_AF.h"   // OV5640 auto-focus library (OV5640 only)
 #include "FS.h"
 #include "SD.h"
 #include "SPI.h"
@@ -22,12 +22,12 @@ unsigned long lastCaptureTime = 0;
 unsigned long captureDuration = 10000; // 10 seconds
 int imageCount = 0;
 
-// --- OV5640 AF（仅 OV5640 模组生效，定焦模组自动跳过） ---
+// --- OV5640 AF (OV5640 only; fixed-focus modules are skipped) ---
 OV5640 ov5640 = OV5640();
-#define OV5640_AF_FOCUS_FRAMESIZE FRAMESIZE_SXGA  // AF 对焦评估需 >=1280x1024
+#define OV5640_AF_FOCUS_FRAMESIZE FRAMESIZE_SXGA  // AF needs >=1280x1024 to evaluate focus
 #define OV5640_FOCUS_TIMEOUT_MS 8000
 
-// 等待 OV5640 连续自动对焦收敛 (FW_STATUS == 0x10 FOCUSED)
+// Wait for OV5640 continuous AF to settle (FW_STATUS == 0x10 FOCUSED)
 bool waitForOv5640Focus() {
   const uint32_t started = millis();
   uint8_t status = 0;
@@ -86,8 +86,8 @@ void setup() {
   camera_sign = true;
   
   // --- OV5640 Heat Optimization ---
-  // 0x302C bit[7:6]:11=4×(默认发热)->00=1×(最弱,最不发热)
-  // 独立作用域，不影响后续代码；OV2640 无此寄存器自动跳过。
+  // 0x302C bit[7:6]: 11=4x (default, hotter) -> 00=1x (weakest, coolest)
+  // Own scope; does not affect later code. OV2640 has no such register and is skipped.
   {
     sensor_t * s = esp_camera_sensor_get();
     if (s && s->id.PID == OV5640_PID) {
@@ -95,16 +95,16 @@ void setup() {
     }
   }
 
-  // --- OV5640 自动对焦初始化（仅 OV5640，定焦模组跳过） ---
+  // --- OV5640 auto-focus init (OV5640 only; fixed-focus modules skipped) ---
   sensor_t *s = esp_camera_sensor_get();
   if (s && s->id.PID == OV5640_PID) {
     Serial.println("OV5640 detected, initializing auto-focus...");
-    // 切到 SXGA 做对焦（AF 固件需要 >=1280x1024 才能评估对比度）
+    // Switch to SXGA for AF (the AF firmware needs >=1280x1024 to evaluate contrast)
     if (s->set_framesize(s, OV5640_AF_FOCUS_FRAMESIZE) != 0) {
       Serial.println("WARN: cannot set SXGA for AF focus, captures will be out of focus");
     } else if (!ov5640.start(s)) {
       Serial.println("WARN: OV5640 CHIPID check failed, AF skipped");
-      s->set_framesize(s, config.frame_size); // 恢复拍摄分辨率
+      s->set_framesize(s, config.frame_size); // restore capture framesize
     } else {
       int r1 = ov5640.focusInit();
       int r2 = (r1 == 0) ? ov5640.autoFocusMode() : -1;

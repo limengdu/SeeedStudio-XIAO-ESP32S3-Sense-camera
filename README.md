@@ -135,7 +135,7 @@ The OV5640 examples in this repo enable VCM auto-focus via the **ESP32-OV5640-AF
 Install it before compiling the AF-enabled examples:
 
 1. **Arduino IDE Library Manager** (easiest): open *Sketch → Include Library → Manage Libraries…*, search for `OV5640`, and install **"OV5640 Auto Focus for ESP32 Camera"**; **or**
-2. **Manual**: download <https://github.com/limengdu/ESP32-OV5640-AF> and copy the `ESP32_OV5640_AF` folder into your Arduino `libraries/` directory, then restart the Arduino IDE.
+2. **Manual**: download the library from <https://github.com/0015/ESP32-OV5640-AF> (Code → Download ZIP), unzip it, and move the unzipped library root folder (the one that contains `library.properties` and `src/`) into your Arduino `libraries/` directory. If needed, rename that folder to `ESP32_OV5640_AF`, then restart the Arduino IDE.
 
 Verify: *Sketch → Include Library* should list **ESP32_OV5640_AF**.
 

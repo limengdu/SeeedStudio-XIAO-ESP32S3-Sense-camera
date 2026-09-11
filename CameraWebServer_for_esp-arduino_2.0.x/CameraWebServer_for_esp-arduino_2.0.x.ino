@@ -1,5 +1,5 @@
 #include "esp_camera.h"
-#include "ESP32_OV5640_AF.h"   // OV5640 自动对焦库 (仅 OV5640 生效)
+#include "ESP32_OV5640_AF.h"   // OV5640 auto-focus library (OV5640 only)
 #include <WiFi.h>
 
 //
@@ -26,9 +26,9 @@ const char *password = "**********";
 void startCameraServer();
 void setupLedFlash(int pin);
 
-// --- OV5640 AF（仅 OV5640 模组生效，定焦模组 OV3660/NT99141 等自动跳过） ---
+// --- OV5640 AF (OV5640 only; fixed-focus modules like OV3660/NT99141 are skipped) ---
 OV5640 ov5640 = OV5640();
-#define OV5640_AF_FOCUS_FRAMESIZE FRAMESIZE_SXGA  // AF 对焦评估需 >=1280x1024
+#define OV5640_AF_FOCUS_FRAMESIZE FRAMESIZE_SXGA  // AF needs >=1280x1024 to evaluate focus
 #define OV5640_FOCUS_TIMEOUT_MS 8000
 bool waitForOv5640Focus() {
   const uint32_t started = millis();
@@ -108,8 +108,8 @@ void setup() {
   }
 
   // --- OV5640 Heat Optimization ---
-  // 0x302C bit[7:6]:11=4×(默认发热)->00=1×(最弱,最不发热)
-  // 独立作用域，不影响后续 AF / set_framesize / set_vflip；OV2640 无此寄存器自动跳过。
+  // 0x302C bit[7:6]: 11=4x (default, hotter) -> 00=1x (weakest, coolest)
+  // Own scope; does not affect later AF / set_framesize / set_vflip. OV2640 has no such register and is skipped.
   {
     sensor_t * s = esp_camera_sensor_get();
     if (s && s->id.PID == OV5640_PID) {
@@ -118,7 +118,7 @@ void setup() {
   }
 
   sensor_t *s = esp_camera_sensor_get();
-  // --- OV5640 自动对焦初始化（仅 OV5640，定焦模组跳过） ---
+  // --- OV5640 auto-focus init (OV5640 only; fixed-focus modules skipped) ---
   if (s && s->id.PID == OV5640_PID) {
     Serial.println("OV5640 detected, initializing auto-focus...");
     if (s->set_framesize(s, OV5640_AF_FOCUS_FRAMESIZE) == 0 && ov5640.start(s)) {
@@ -126,7 +126,7 @@ void setup() {
       int r2 = (r1 == 0) ? ov5640.autoFocusMode() : -1;
       Serial.printf("  focusInit=%d autoFocusMode=%d\n", r1, r2);
       if (r1 == 0 && r2 == 0) waitForOv5640Focus();
-      s->set_framesize(s, config.frame_size);  // 恢复
+      s->set_framesize(s, config.frame_size);  // restore
     } else {
       Serial.println("WARN: OV5640 AF setup failed, skipped");
       s->set_framesize(s, config.frame_size);

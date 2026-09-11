@@ -2,7 +2,7 @@
 #include <TFT_eSPI.h>
 #include <SPI.h>
 #include "esp_camera.h"
-#include "ESP32_OV5640_AF.h"   // OV5640 自动对焦库 (仅 OV5640 生效)
+#include "ESP32_OV5640_AF.h"   // OV5640 auto-focus library (OV5640 only)
 
 #define CAMERA_MODEL_XIAO_ESP32S3 // Has PSRAM
 
@@ -14,7 +14,7 @@ const int camera_height = 240;
 
 TFT_eSPI tft = TFT_eSPI();
 
-// --- OV5640 AF（仅 OV5640 模组生效，定焦模组 OV3660/NT99141 等自动跳过） ---
+// --- OV5640 AF (OV5640 only; fixed-focus modules like OV3660/NT99141 are skipped) ---
 OV5640 ov5640 = OV5640();
 #define OV5640_FOCUS_TIMEOUT_MS 8000
 bool waitForOv5640Focus() {
@@ -79,7 +79,7 @@ void setup() {
   } else {
     // Best option for face detection/recognition
     config.frame_size = FRAMESIZE_240X240;
-    // RGB565 240×240 用内部 DRAM 单缓冲：TFT_eSPI 的 SPI DMA 能直接读 DRAM，读 PSRAM 会导致 pushColors 崩
+    // RGB565 240x240 uses a single internal DRAM buffer: TFT_eSPI's SPI DMA can read DRAM directly; reading from PSRAM crashes pushColors
     config.fb_location = CAMERA_FB_IN_DRAM;
     config.fb_count = 1;
   }
@@ -93,8 +93,8 @@ void setup() {
   Serial.printf("Camera ready");
 
   // --- OV5640 Heat Optimization ---
-  // 0x302C bit[7:6]:11=4×(默认发热)->00=1×(最弱,最不发热)
-  // 独立作用域，不影响后续 AF / set_framesize / set_vflip；OV2640 无此寄存器自动跳过。
+  // 0x302C bit[7:6]: 11=4x (default, hotter) -> 00=1x (weakest, coolest)
+  // Own scope; does not affect later AF / set_framesize / set_vflip. OV2640 has no such register and is skipped.
   {
     sensor_t * s = esp_camera_sensor_get();
     if (s && s->id.PID == OV5640_PID) {
@@ -102,8 +102,8 @@ void setup() {
     }
   }
 
-  // --- OV5640 自动对焦初始化（仅 OV5640，定焦模组跳过） ---
-  // RGB565 模式不切 SXGA（会撑爆 fb 缓冲），依赖 OV5640 内部全尺寸做对焦评估
+  // --- OV5640 auto-focus init (OV5640 only; fixed-focus modules skipped) ---
+  // In RGB565 mode do not switch to SXGA (would overflow the frame buffer); rely on the OV5640 internal full-size focus evaluation
   sensor_t *s = esp_camera_sensor_get();
   if (s && s->id.PID == OV5640_PID) {
     Serial.println("OV5640 detected, initializing auto-focus...");
@@ -123,7 +123,7 @@ void setup() {
   // Display initialization
   tft.init();
   pinMode(TFT_BL, OUTPUT);
-  digitalWrite(TFT_BL, HIGH);  // 开背光
+  digitalWrite(TFT_BL, HIGH);  // turn on backlight
   tft.setRotation(1);
   tft.fillScreen(TFT_WHITE);
 

@@ -17,16 +17,16 @@
  *
  * Adapted by MRovai @02June23
  *
- * 通用 OV5640 自动对焦补丁（仅对 OV5640 生效，定焦模组 OV3660/NT99141 等自动跳过）：
- *  - esp_camera_init 后判 PID == OV5640_PID 才做 focusInit / autoFocusMode
- *  - RGB565 模式下不切 SXGA（会撑爆 fb 缓冲），依赖 OV5640 内部全尺寸做对焦评估
+ * Generic OV5640 auto-focus patch (OV5640 only; fixed-focus modules like OV3660/NT99141 are skipped):
+ *  - After esp_camera_init, run focusInit / autoFocusMode only when PID == OV5640_PID
+ *  - In RGB565 mode do not switch to SXGA (would overflow the frame buffer); rely on the OV5640 internal full-size focus evaluation
 */
 
 #include <Arduino.h>
 #include <TFT_eSPI.h>
 #include <SPI.h>
 #include "esp_camera.h"
-#include "ESP32_OV5640_AF.h"   // OV5640 自动对焦库 (github.com/0015/ESP32-OV5640-AF)，仅 OV5640 生效
+#include "ESP32_OV5640_AF.h"   // OV5640 auto-focus library (github.com/0015/ESP32-OV5640-AF), OV5640 only
 #include "FS.h"
 #include "SD.h"
 
@@ -58,11 +58,11 @@ bool sd_sign = false;              // Check sd status
 
 TFT_eSPI tft = TFT_eSPI();
 
-// --- OV5640 AF（仅 OV5640 模组生效） ---
+// --- OV5640 AF (OV5640 only) ---
 OV5640 ov5640 = OV5640();
 #define OV5640_FOCUS_TIMEOUT_MS 8000
 
-// 等待 OV5640 连续自动对焦收敛 (FW_STATUS == 0x10 FOCUSED)
+// Wait for OV5640 continuous AF to settle (FW_STATUS == 0x10 FOCUSED)
 bool waitForOv5640Focus() {
   const uint32_t started = millis();
   uint8_t status = 0;
@@ -136,8 +136,8 @@ void setup() {
   config.frame_size = FRAMESIZE_240X240;
   config.pixel_format = PIXFORMAT_RGB565;
   config.grab_mode = CAMERA_GRAB_WHEN_EMPTY;
-  // RGB565 240×240 用内部 DRAM 单缓冲：TFT_eSPI 的 SPI DMA 能直接读 DRAM，
-  // 读 PSRAM 会导致 pushColors 崩（见 Setup66 + PSRAM 组合的问题记录）
+  // RGB565 240x240 uses a single internal DRAM buffer: TFT_eSPI's SPI DMA can read DRAM directly;
+  // reading from PSRAM crashes pushColors (see the Setup66 + PSRAM issue notes)
   config.fb_location = CAMERA_FB_IN_DRAM;
   config.jpeg_quality = 12;
   config.fb_count = 1;
@@ -152,8 +152,8 @@ void setup() {
   camera_sign = true; // Camera initialization check passes
 
   // --- OV5640 Heat Optimization ---
-  // 0x302C bit[7:6]:11=4×(默认发热)->00=1×(最弱,最不发热)
-  // 独立作用域，不影响后续 AF / set_framesize / set_vflip；OV2640 无此寄存器自动跳过。
+  // 0x302C bit[7:6]: 11=4x (default, hotter) -> 00=1x (weakest, coolest)
+  // Own scope; does not affect later AF / set_framesize / set_vflip. OV2640 has no such register and is skipped.
   {
     sensor_t * s = esp_camera_sensor_get();
     if (s && s->id.PID == OV5640_PID) {
@@ -161,17 +161,17 @@ void setup() {
     }
   }
 
-  // --- OV5640 自动对焦初始化（仅 OV5640，定焦模组跳过） ---
-  // 出厂固件缺失的关键步骤：esp_camera_init 不做 AF，OV5640 默认失焦。
-  // RGB565 模式不切 SXGA（会撑爆 fb 缓冲），依赖 OV5640 内部全尺寸做对焦评估。
+  // --- OV5640 auto-focus init (OV5640 only; fixed-focus modules skipped) ---
+  // Missing from factory firmware: esp_camera_init does not do AF, so OV5640 defaults to out of focus.
+  // In RGB565 mode do not switch to SXGA (would overflow the frame buffer); rely on the OV5640 internal full-size focus evaluation.
   sensor_t *s = esp_camera_sensor_get();
   if (s && s->id.PID == OV5640_PID) {
     Serial.println("OV5640 detected, initializing auto-focus...");
     if (!ov5640.start(s)) {
       Serial.println("WARN: OV5640 CHIPID check failed, AF skipped");
     } else {
-      int r1 = ov5640.focusInit();                       // 灌入对焦固件，0=成功
-      int r2 = (r1 == 0) ? ov5640.autoFocusMode() : -1;  // 启用连续自动对焦
+      int r1 = ov5640.focusInit();                       // upload focus firmware, 0=success
+      int r2 = (r1 == 0) ? ov5640.autoFocusMode() : -1;  // enable continuous auto-focus
       Serial.printf("  focusInit=%d autoFocusMode=%d\n", r1, r2);
       if (r1 == 0 && r2 == 0) {
         waitForOv5640Focus();
@@ -187,7 +187,7 @@ void setup() {
   // Display initialization
   tft.init();
   pinMode(TFT_BL, OUTPUT);
-  digitalWrite(TFT_BL, HIGH);  // 开背光
+  digitalWrite(TFT_BL, HIGH);  // turn on backlight
   tft.setRotation(1);
   tft.fillScreen(TFT_WHITE);
 

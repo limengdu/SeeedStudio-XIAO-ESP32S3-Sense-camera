@@ -7,14 +7,14 @@
 */
 
 #include "appGlobals.h"
-#include "ESP32_OV5640_AF.h"   // OV5640 自动对焦库 (仅 OV5640 生效)
+#include "ESP32_OV5640_AF.h"   // OV5640 auto-focus library (OV5640 only)
 
-// --- OV5640 AF（仅 OV5640 模组生效，定焦模组自动跳过） ---
+// --- OV5640 AF (OV5640 only; fixed-focus modules are skipped) ---
 OV5640 ov5640 = OV5640();
-#define OV5640_AF_FOCUS_FRAMESIZE FRAMESIZE_SXGA  // AF 对焦评估需 >=1280x1024
+#define OV5640_AF_FOCUS_FRAMESIZE FRAMESIZE_SXGA  // AF needs >=1280x1024 to evaluate focus
 #define OV5640_FOCUS_TIMEOUT_MS 8000
 
-// 等待 OV5640 连续自动对焦收敛 (FW_STATUS == 0x10 FOCUSED)
+// Wait for OV5640 continuous AF to settle (FW_STATUS == 0x10 FOCUSED)
 bool waitForOv5640Focus() {
   const uint32_t started = millis();
   uint8_t status = 0;
@@ -838,16 +838,16 @@ bool prepCam() {
   if (err != ESP_OK) snprintf(startupFailure, SF_LEN, STARTUP_FAIL "Camera init error 0x%x on %s", err, CAM_BOARD);
   else {
     // --- OV5640 Heat Optimization ---
-    // 0x302C bit[7:6]:11=4×(默认发热)->00=1×(最弱,最不发热)
-    // 独立作用域，不影响后续 PID 判定 / set_framesize；OV2640 无此寄存器自动跳过。
+    // 0x302C bit[7:6]: 11=4x (default, hotter) -> 00=1x (weakest, coolest)
+    // Own scope; does not affect later PID check / set_framesize. OV2640 has no such register and is skipped.
     {
       sensor_t * s = esp_camera_sensor_get();
       if (s && s->id.PID == OV5640_PID) {
         s->set_reg(s, 0x302C, 0xC0, 0x00);
       }
     }
-    // --- OV5640 自动对焦初始化（仅 OV5640，定焦模组跳过） ---
-    // 切到 SXGA 做对焦；后续 set_framesize(configured) 会恢复录像分辨率。
+    // --- OV5640 auto-focus init (OV5640 only; fixed-focus modules skipped) ---
+    // Switch to SXGA for AF; the later set_framesize(configured) restores the recording framesize.
     {
       sensor_t * s = esp_camera_sensor_get();
       if (s && s->id.PID == OV5640_PID) {
