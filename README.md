@@ -130,14 +130,40 @@ Before we start, we recommend you to read this chapter to understand the common 
 
 ### Part 0: ESP32-OV5640-AF library (OV5640 auto-focus)
 
-The OV5640 examples in this repo enable VCM auto-focus via the **ESP32-OV5640-AF** library. Auto-focus only runs when an OV5640 sensor is detected (`s->id.PID == OV5640_PID`); fixed-focus modules such as OV2640/OV3660 are automatically skipped, so the library is safe to install and compile even without an OV5640 present.
+The example sketches in this repo do **not** initialize auto-focus and do **not** require the **ESP32-OV5640-AF** library — they compile and run as-is on a fixed-focus OV5640 module (the lens shipped on this board is OV5640 without a VCM/auto-focus actuator). The OV5640 heat-optimization register write (`0x302C`) is kept, but it is unrelated to AF.
 
-Install it before compiling the AF-enabled examples:
+If your OV5640 module has a VCM (voice-coil motor) lens and you want continuous auto-focus, you must integrate the AF initialization yourself. The library is optional and only needed in that case:
 
 1. **Arduino IDE Library Manager** (easiest): open *Sketch → Include Library → Manage Libraries…*, search for `OV5640`, and install **"OV5640 Auto Focus for ESP32 Camera"**; **or**
 2. **Manual**: download the library from <https://github.com/0015/ESP32-OV5640-AF> (Code → Download ZIP), unzip it, and move the unzipped library root folder (the one that contains `library.properties` and `src/`) into your Arduino `libraries/` directory. If needed, rename that folder to `ESP32_OV5640_AF`, then restart the Arduino IDE.
 
 Verify: *Sketch → Include Library* should list **ESP32_OV5640_AF**.
+
+Add the header at the top of your sketch (the examples in this repo do not include it):
+
+```cpp
+#include "ESP32_OV5640_AF.h"
+```
+
+Then in `setup()`, after `esp_camera_init()`, call (OV5640 only; fixed-focus modules such as OV2640/OV3660 are skipped):
+
+```cpp
+sensor_t *s = esp_camera_sensor_get();
+if (s && s->id.PID == OV5640_PID) {
+  OV5640 ov5640;
+  if (ov5640.start(s)) {        // CHIPID check (returns true on success)
+    ov5640.focusInit();         // upload AF firmware
+    ov5640.autoFocusMode();     // enable continuous auto-focus
+  }
+}
+```
+
+Note: the AF firmware evaluates contrast using the sensor's full internal readout, so you do **not** need to change the capture framesize for `focusInit()`/`autoFocusMode()` to work.
+
+- **JPEG examples** (e.g. `take_photos`, UXGA + PSRAM): the frame buffer can hold a large image, so it is safe to `set_framesize(SXGA)` before `focusInit()` and restore it afterwards if you want the AF evaluation to match a high-resolution capture.
+- **RGB565 round-display examples** (`round_display_take_picture*`, `video_stream_round_display`, 240×240 in DRAM): do **not** switch to SXGA — the frame buffer was allocated for 240×240 and `set_framesize()` does not re-allocate it, so a larger size will overflow the buffer or fail to grab a frame. Rely on the OV5640's internal full-size focus evaluation instead, exactly as the original AF patch did in RGB565 mode.
+
+Fixed-focus modules have no AF hardware and are unaffected whether or not the library is installed.
 
 ### Part I: esp_camera.h
 
