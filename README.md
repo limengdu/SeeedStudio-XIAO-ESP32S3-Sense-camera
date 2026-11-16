@@ -139,13 +139,19 @@ If your OV5640 module has a VCM (voice-coil motor) lens and you want continuous 
 
 Verify: *Sketch → Include Library* should list **ESP32_OV5640_AF**.
 
+Add the header at the top of your sketch (the examples in this repo do not include it):
+
+```cpp
+#include "ESP32_OV5640_AF.h"
+```
+
 Then in `setup()`, after `esp_camera_init()`, call (OV5640 only; fixed-focus modules such as OV2640/OV3660 are skipped):
 
 ```cpp
 sensor_t *s = esp_camera_sensor_get();
 if (s && s->id.PID == OV5640_PID) {
   OV5640 ov5640;
-  if (ov5640.start(s) == 0) {   // CHIPID check
+  if (ov5640.start(s)) {        // CHIPID check (returns true on success)
     ov5640.focusInit();         // upload AF firmware
     ov5640.autoFocusMode();     // enable continuous auto-focus
   }
